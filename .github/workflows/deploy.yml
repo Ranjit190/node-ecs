@@ -1,28 +1,26 @@
-name: Deploy to Amazon ECS
+name: Deploy to AWS ECS
 
 on:
   push:
     branches: ["master"]
+  workflow_dispatch:
 
 env:
-  AWS_REGION: us-east-1                       # change to your AWS region
-  ECR_REPOSITORY: node-app                    # your ECR repo name
-  ECS_SERVICE: node-app-be73               # your ECS service name
-  ECS_CLUSTER: everlasting-bird-z8ayk2              # your ECS cluster name
-  ECS_TASK_DEFINITION: .aws/task-definition.json
-  CONTAINER_NAME: node-ecs-app                # must match containerDefinitions[].name
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: node-app
+  ECS_CLUSTER: everlasting-bird-z8ayk2
+  ECS_SERVICE: node-app-be73
 
 permissions:
   contents: read
 
 jobs:
   deploy:
-    name: Deploy
+    name: Build & Deploy
     runs-on: ubuntu-latest
-    environment: production
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Configure AWS credentials
@@ -36,29 +34,34 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push image to Amazon ECR
-        id: build-image
+      - name: Build, tag, and push image to ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker build \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "Pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
-      - name: Fill in the new image ID in the Amazon ECS task definition
-        id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: ${{ env.ECS_TASK_DEFINITION }}
-          container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ steps.build-image.outputs.image }}
+      - name: Deploy to ECS (force new deployment)
+        run: |
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVICE \
+            --force-new-deployment \
+            --region $AWS_REGION \
+            --no-cli-pager
+          echo "Deploy triggered"
 
-      - name: Deploy Amazon ECS task definition
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-        with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ${{ env.ECS_SERVICE }}
-          cluster: ${{ env.ECS_CLUSTER }}
-          wait-for-service-stability: true
+      - name: Wait for deployment to complete
+        run: |
+          echo "Waiting for service to stabilize (2-5 min)..."
+          aws ecs wait services-stable \
+            --cluster $ECS_CLUSTER \
+            --services $ECS_SERVICE \
+            --region $AWS_REGION
+          echo "Deployment complete"
