@@ -13,7 +13,7 @@ app.use(express.json());
  * @returns {void}
  */
 app.get('/', (req: Request, res: Response): void => {
-  res.status(200).json({ message: 'Health check pass' });
+  res.status(200).json({ message: 'Health check pass---2' });
 });
 /**
  * GET /test
