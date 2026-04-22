@@ -6,6 +6,16 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 
 /**
+ * GET /
+ * Health check endpoint that returns a running message.
+ * @param {Request} req - Express request object.
+ * @param {Response} res - Express response object.
+ * @returns {void}
+ */
+app.get('/', (req: Request, res: Response): void => {
+  res.status(200).json({ message: 'Health check pass' });
+});
+/**
  * GET /test
  * Health check endpoint that returns a running message.
  * @param {Request} req - Express request object.
@@ -13,7 +23,7 @@ app.use(express.json());
  * @returns {void}
  */
 app.get('/test', (req: Request, res: Response): void => {
-  res.status(200).json({ message: 'Server is runing' });
+  res.status(200).json({ message: 'Server is running----1' });
 });
 
 /**
