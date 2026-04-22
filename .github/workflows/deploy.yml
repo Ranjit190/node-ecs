@@ -6,9 +6,9 @@ on:
 
 env:
   AWS_REGION: us-east-1                       # change to your AWS region
-  ECR_REPOSITORY: node-ecs                    # your ECR repo name
-  ECS_SERVICE: node-ecs-service               # your ECS service name
-  ECS_CLUSTER: node-ecs-cluster               # your ECS cluster name
+  ECR_REPOSITORY: node-app                    # your ECR repo name
+  ECS_SERVICE: node-app-be73               # your ECS service name
+  ECS_CLUSTER: everlasting-bird-z8ayk2              # your ECS cluster name
   ECS_TASK_DEFINITION: .aws/task-definition.json
   CONTAINER_NAME: node-ecs-app                # must match containerDefinitions[].name
 
